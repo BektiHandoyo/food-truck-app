@@ -1,0 +1,118 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"ft_hdr_shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"ft_sc_session\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Food Truck Session\",\"col\":3}},{\"id\":\"ft_sc_unit\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Food Truck Unit\",\"col\":3}},{\"id\":\"ft_sc_history\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Food Truck Ticket History\",\"col\":3}},{\"id\":\"ft_sc_settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Food Truck Settings\",\"col\":3}},{\"id\":\"ft_spacer_1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"ft_hdr_docs\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Master & Operasional</b></span>\",\"col\":12}},{\"id\":\"ft_card_ops\",\"type\":\"card\",\"data\":{\"card_name\":\"Operasional Harian\",\"col\":6}},{\"id\":\"ft_card_cfg\",\"type\":\"card\",\"data\":{\"card_name\":\"Riwayat & Konfigurasi\",\"col\":6}}]",
+ "creation": "2026-11-20 12:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "retail",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Food Truck",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Operasional Harian",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Food Truck Unit",
+   "link_count": 0,
+   "link_to": "Food Truck Unit",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Food Truck Session",
+   "link_count": 0,
+   "link_to": "Food Truck Session",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Riwayat & Konfigurasi",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Food Truck Ticket History",
+   "link_count": 0,
+   "link_to": "Food Truck Ticket History",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Food Truck Settings",
+   "link_count": 0,
+   "link_to": "Food Truck Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-11-20 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Food Truck App",
+ "name": "Food Truck",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Food Truck Session",
+   "link_to": "Food Truck Session",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Food Truck Unit",
+   "link_to": "Food Truck Unit",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Food Truck Ticket History",
+   "link_to": "Food Truck Ticket History",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Food Truck Settings",
+   "link_to": "Food Truck Settings",
+   "type": "DocType"
+  }
+ ],
+ "title": "Food Truck"
+}

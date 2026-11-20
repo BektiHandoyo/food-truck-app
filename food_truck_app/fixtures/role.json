@@ -1,0 +1,22 @@
+[
+ {
+  "desk_access": 0,
+  "disabled": 0,
+  "doctype": "Role",
+  "home_page": "/war-tiket",
+  "is_custom": 1,
+  "name": "Mahasiswa",
+  "role_name": "Mahasiswa",
+  "two_factor_auth": 0
+ },
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "doctype": "Role",
+  "home_page": "/validasi-tiket",
+  "is_custom": 1,
+  "name": "Petugas Food Truck",
+  "role_name": "Petugas Food Truck",
+  "two_factor_auth": 0
+ }
+]
