@@ -1,9 +1,12 @@
 # Copyright (c) 2026, BektiHandoyo and contributors
 # For license information, please see license.txt
 
+from datetime import datetime
+import re
+
 import frappe
 import requests
-from frappe.utils import today
+from frappe.utils import now_datetime, today
 
 from food_truck_app.auth import (
 	ROLE_MAHASISWA,
@@ -14,6 +17,23 @@ from food_truck_app.auth import (
 )
 
 DO_TIMEOUT_SECONDS = 10
+UUID_REGEX = re.compile(
+	r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+
+def _ms_to_datetime_str(ms_val: int | float | None) -> str | None:
+	if not ms_val:
+		return None
+	try:
+		dt = datetime.fromtimestamp(float(ms_val) / 1000.0)
+		return dt.strftime("%Y-%m-%d %H:%M:%S")
+	except (ValueError, TypeError, OSError):
+		return None
+
+
+def _is_uuid(val: str) -> bool:
+	return bool(UUID_REGEX.match((val or "").strip()))
 
 
 def _get_do_settings() -> tuple[str, str]:
@@ -303,3 +323,193 @@ def get_my_ticket(date: str | None = None) -> dict:
 		"user_id": user_id,
 		"claim": claim,
 	}
+
+
+@frappe.whitelist()
+def redeem_ticket(
+	identifier: str | None = None,
+	claim_id: str | None = None,
+	user_id: str | None = None,
+	date: str | None = None,
+) -> dict:
+	"""Validasi role Petugas Food Truck, lalu teruskan redeem via claim_id (QR) atau user_id (NIM) ke POST /redeem DO."""
+	require_role(ROLE_PETUGAS)
+	target_date = str(date or today())
+
+	cid = (claim_id or "").strip()
+	uid = (user_id or "").strip()
+	ident = (identifier or "").strip()
+
+	if not cid and not uid:
+		if not ident:
+			frappe.throw("Masukkan Claim ID (QR) atau NIM Mahasiswa.")
+		if _is_uuid(ident):
+			cid = ident
+		else:
+			uid = ident
+
+	payload = {"claim_id": cid} if cid else {"user_id": uid}
+	do_data, status_code = _request_do(
+		"POST",
+		"/redeem",
+		workspace_date=target_date,
+		json_body=payload,
+	)
+
+	slot_id = do_data.get("slotId")
+	if slot_id:
+		session_row = frappe.db.get_value(
+			"Food Truck Session",
+			{"slot_id": slot_id, "session_date": target_date},
+			["name", "food_truck_unit", "slot_time"],
+			as_dict=True,
+		)
+		if session_row:
+			unit_info = frappe.db.get_value(
+				"Food Truck Unit",
+				session_row.food_truck_unit,
+				["unit_name", "location"],
+				as_dict=True,
+			)
+			do_data["session_name"] = session_row.name
+			do_data["food_truck_unit"] = session_row.food_truck_unit
+			do_data["unit_name"] = unit_info.unit_name if unit_info else session_row.food_truck_unit
+			do_data["location"] = (unit_info.location or "") if unit_info else ""
+			do_data["slot_time"] = session_row.slot_time
+
+	return {
+		**do_data,
+		"http_status": status_code,
+		"date": target_date,
+	}
+
+
+def _upsert_ticket_history(claim: dict, session_by_slot: dict, target_date: str) -> str:
+	claim_id = (claim.get("id") or claim.get("claimId") or "").strip()
+	if not claim_id:
+		return ""
+
+	slot_id = claim.get("slot_id") or claim.get("slotId") or ""
+	session_info = session_by_slot.get(slot_id)
+	food_truck_unit = session_info.food_truck_unit if session_info else (
+		slot_id.split("_", 1)[0] if "_" in slot_id else ""
+	)
+	slot_time = session_info.slot_time if session_info else (
+		slot_id.split("_", 1)[1] if "_" in slot_id else ""
+	)
+
+	values = {
+		"request_id": claim.get("request_id") or claim.get("requestId") or "",
+		"food_truck_session": session_info.name if session_info else None,
+		"food_truck_unit": food_truck_unit if frappe.db.exists("Food Truck Unit", food_truck_unit) else None,
+		"session_date": str(session_info.session_date) if session_info else target_date,
+		"slot_id": slot_id,
+		"slot_time": slot_time,
+		"user_id": str(claim.get("user_id") or claim.get("userId") or ""),
+		"queue_pos": int(claim.get("queue_pos") or claim.get("queuePos") or 1),
+		"status": claim.get("status") or "EXPIRED",
+		"claimed_at": _ms_to_datetime_str(claim.get("claimed_at") or claim.get("claimedAt")),
+		"redeemed_at": _ms_to_datetime_str(claim.get("redeemed_at") or claim.get("redeemedAt")),
+		"expired_at": _ms_to_datetime_str(claim.get("expires_at") or claim.get("expiresAt")),
+	}
+
+	if frappe.db.exists("Food Truck Ticket History", claim_id):
+		doc = frappe.get_doc("Food Truck Ticket History", claim_id)
+		doc.update(values)
+		doc.save(ignore_permissions=True)
+	else:
+		doc = frappe.get_doc(
+			{
+				"doctype": "Food Truck Ticket History",
+				"claim_id": claim_id,
+				**values,
+			}
+		)
+		doc.insert(ignore_permissions=True)
+
+	return doc.name
+
+
+@frappe.whitelist()
+def close_session_and_sync(
+	session_name: str | None = None,
+	date: str | None = None,
+	food_truck_unit: str | None = None,
+) -> dict:
+	"""Tutup sesi di DO (POST /close-session), simpan claims secara idempotent ke Food Truck Ticket History, dan ubah status sesi ke Closed."""
+	require_role(ROLE_PETUGAS)
+
+	session_name = (session_name or "").strip()
+	food_truck_unit = (food_truck_unit or "").strip()
+
+	if session_name:
+		if not frappe.db.exists("Food Truck Session", session_name):
+			frappe.throw(f"Food Truck Session '{session_name}' tidak ditemukan.", frappe.DoesNotExistError)
+		session_doc = frappe.get_doc("Food Truck Session", session_name)
+		target_sessions = [session_doc]
+		target_date = str(session_doc.session_date)
+	else:
+		target_date = str(date or today())
+		filters: dict = {"session_date": target_date, "status": ["in", ["Open", "Closed"]]}
+		if food_truck_unit:
+			filters["food_truck_unit"] = food_truck_unit
+		names = frappe.get_all("Food Truck Session", filters=filters, pluck="name")
+		target_sessions = [frappe.get_doc("Food Truck Session", name) for name in names]
+
+	if not target_sessions:
+		frappe.throw("Tidak ada Food Truck Session yang ditemukan untuk ditutup.")
+
+	# Pastikan slot sudah ter-seed di DO sebelum ditutup
+	open_subset = [
+		{
+			"name": s.name,
+			"slot_id": s.slot_id,
+			"slot_time": s.slot_time,
+			"quota": s.quota,
+			"synced_to_do": s.synced_to_do,
+		}
+		for s in target_sessions
+		if not s.synced_to_do
+	]
+	if open_subset:
+		_sync_open_sessions_internal(target_date, open_subset)
+
+	slot_ids = [s.slot_id for s in target_sessions if s.slot_id]
+	do_data, status_code = _request_do(
+		"POST",
+		"/close-session",
+		workspace_date=target_date,
+		json_body={"slot_ids": slot_ids},
+	)
+	if not do_data.get("ok"):
+		frappe.throw(do_data.get("message") or f"Gagal menutup sesi di DO (HTTP {status_code})")
+
+	session_by_slot = {s.slot_id: s for s in target_sessions}
+	claims = do_data.get("claims") or []
+	synced_claim_ids = []
+	for claim in claims:
+		saved_id = _upsert_ticket_history(claim, session_by_slot, target_date)
+		if saved_id:
+			synced_claim_ids.append(saved_id)
+
+	closed_dt = _ms_to_datetime_str(do_data.get("closedAt")) or now_datetime().strftime("%Y-%m-%d %H:%M:%S")
+	closed_sessions = []
+	for s in target_sessions:
+		s.status = "Closed"
+		s.synced_to_do = 1
+		if not s.closed_at:
+			s.closed_at = closed_dt
+		s.save(ignore_permissions=True)
+		closed_sessions.append(s.name)
+
+	return {
+		"ok": True,
+		"date": target_date,
+		"closed_sessions": closed_sessions,
+		"slot_ids": slot_ids,
+		"synced_claims_count": len(synced_claim_ids),
+		"synced_claim_ids": synced_claim_ids,
+		"slots": do_data.get("slots") or [],
+		"claims": claims,
+	}
+

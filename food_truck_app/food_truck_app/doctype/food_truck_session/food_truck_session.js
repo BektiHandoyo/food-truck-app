@@ -23,6 +23,36 @@ frappe.ui.form.on("Food Truck Session", {
 					},
 				});
 			});
+
+			frm.add_custom_button(__("Close Session & Sync History"), () => {
+				frappe.confirm(
+					__(
+						"Tutup sesi ini? Seluruh tiket CLAIMED yang belum di-redeem akan menjadi EXPIRED dan riwayat tiket akan disimpan ke Frappe."
+					),
+					() => {
+						frappe.call({
+							method: "food_truck_app.api.close_session_and_sync",
+							args: { session_name: frm.doc.name },
+							freeze: true,
+							freeze_message: __(
+								"Closing session and syncing ticket history..."
+							),
+							callback(r) {
+								if (r.message && r.message.ok) {
+									frappe.show_alert({
+										message: __(
+											"Session closed. Synced {0} ticket(s) to Cold Storage.",
+											[r.message.synced_claims_count]
+										),
+										indicator: "green",
+									});
+									frm.reload_doc();
+								}
+							},
+						});
+					}
+				);
+			});
 		}
 	},
 });

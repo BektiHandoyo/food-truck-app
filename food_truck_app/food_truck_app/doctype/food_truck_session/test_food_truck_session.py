@@ -7,8 +7,10 @@ from frappe.utils import today
 
 from food_truck_app.api import (
 	claim_ticket,
+	close_session_and_sync,
 	get_available_slots,
 	get_my_ticket,
+	redeem_ticket,
 	sync_slots_to_do,
 )
 from food_truck_app.auth import (
@@ -225,6 +227,126 @@ class TestFoodTruckSession(FrappeTestCase):
 			self.assertIsNotNone(my_ticket["claim"])
 			self.assertEqual(my_ticket["claim"]["claimId"], claim_res["claimId"])
 			self.assertEqual(my_ticket["claim"]["unitName"], "Gerobak Nusantara 1")
+		finally:
+			frappe.set_user(prev_user)
+
+	def test_staff_redeem_and_idempotent_close_session_sync(self):
+		settings = frappe.get_single("Food Truck Settings")
+		settings.do_base_url = "http://127.0.0.1:18787"
+		settings.do_api_secret = "dev-food-truck-secret"
+		settings.save()
+
+		today_str = str(today())
+
+		if not frappe.db.exists("Food Truck Unit", "FT-STAFF-01"):
+			frappe.get_doc(
+				{
+					"doctype": "Food Truck Unit",
+					"unit_code": "FT-STAFF-01",
+					"unit_name": "Gerobak Petugas 01",
+					"location": "Kantin Barat",
+					"is_active": 1,
+				}
+			).insert()
+
+		frappe.db.delete(
+			"Food Truck Session",
+			{"food_truck_unit": "FT-STAFF-01", "session_date": today_str},
+		)
+
+		session = frappe.get_doc(
+			{
+				"doctype": "Food Truck Session",
+				"session_date": today_str,
+				"food_truck_unit": "FT-STAFF-01",
+				"slot_time": "13:00",
+				"quota": 5,
+				"status": "Open",
+			}
+		).insert()
+
+		# Buat 2 user Mahasiswa dan 1 user Petugas Food Truck
+		for nim in ("240201", "240202"):
+			email = f"mhs{nim}@food.truck"
+			if not frappe.db.exists("User", email):
+				frappe.get_doc(
+					{
+						"doctype": "User",
+						"email": email,
+						"first_name": f"Mhs {nim}",
+						"username": nim,
+						"nim": nim,
+						"send_welcome_email": 0,
+						"roles": [{"role": ROLE_MAHASISWA}],
+					}
+				).insert(ignore_permissions=True)
+
+		petugas_email = "petugas01@food.truck"
+		if not frappe.db.exists("User", petugas_email):
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": petugas_email,
+					"first_name": "Petugas Satu",
+					"username": "petugas01",
+					"send_welcome_email": 0,
+					"roles": [{"role": ROLE_PETUGAS}],
+				}
+			).insert(ignore_permissions=True)
+
+		prev_user = frappe.session.user
+		try:
+			# 1. Kedua mahasiswa klaim tiket pada slot FT-STAFF-01_13:00
+			frappe.set_user("mhs240201@food.truck")
+			c1 = claim_ticket(session.slot_id, request_id="test-staff-claim-240201")
+			self.assertTrue(c1["ok"])
+
+			frappe.set_user("mhs240202@food.truck")
+			c2 = claim_ticket(session.slot_id, request_id="test-staff-claim-240202")
+			self.assertTrue(c2["ok"])
+
+			# 2. Mahasiswa tidak boleh memanggil redeem_ticket maupun close_session_and_sync
+			with self.assertRaises(frappe.PermissionError):
+				redeem_ticket(c1["claimId"])
+			with self.assertRaises(frappe.PermissionError):
+				close_session_and_sync(session.name)
+
+			# 3. Petugas Food Truck me-redeem tiket mahasiswa 1 via identifier (UUID QR claim_id)
+			frappe.set_user(petugas_email)
+			redeem_res = redeem_ticket(c1["claimId"])
+			self.assertTrue(redeem_res["ok"])
+			self.assertEqual(redeem_res["status"], "REDEEMED")
+			self.assertEqual(redeem_res["userId"], "240201")
+
+			# Double redeem mengembalikan ok=False & HTTP 409
+			double_redeem = redeem_ticket("240201")
+			self.assertFalse(double_redeem["ok"])
+			self.assertEqual(double_redeem["http_status"], 409)
+
+			# 4. Petugas menutup sesi & sync ke Cold Storage (Food Truck Ticket History)
+			close_res_1 = close_session_and_sync(session.name)
+			self.assertTrue(close_res_1["ok"])
+			self.assertEqual(close_res_1["synced_claims_count"], 2)
+
+			session.reload()
+			self.assertEqual(session.status, "Closed")
+			self.assertIsNotNone(session.closed_at)
+
+			h1 = frappe.get_doc("Food Truck Ticket History", c1["claimId"])
+			h2 = frappe.get_doc("Food Truck Ticket History", c2["claimId"])
+			self.assertEqual(h1.status, "REDEEMED")
+			self.assertIsNotNone(h1.redeemed_at)
+			self.assertEqual(h2.status, "EXPIRED")
+			self.assertIsNotNone(h2.expired_at)
+
+			# 5. Idempotency check: panggil ulang close_session_and_sync -> tidak ada duplikat record
+			close_res_2 = close_session_and_sync(session.name)
+			self.assertTrue(close_res_2["ok"])
+			count_in_db = frappe.db.count(
+				"Food Truck Ticket History",
+				{"food_truck_session": session.name},
+			)
+			self.assertEqual(count_in_db, 2)
 		finally:
 			frappe.set_user(prev_user)
 
