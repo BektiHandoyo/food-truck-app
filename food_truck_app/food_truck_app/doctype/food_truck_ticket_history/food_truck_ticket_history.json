@@ -1,0 +1,146 @@
+{
+ "actions": [],
+ "autoname": "field:claim_id",
+ "creation": "2026-11-20 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "claim_id",
+  "request_id",
+  "food_truck_session",
+  "food_truck_unit",
+  "session_date",
+  "slot_id",
+  "slot_time",
+  "user_id",
+  "queue_pos",
+  "status",
+  "claimed_at",
+  "redeemed_at",
+  "expired_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "claim_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Claim ID",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "request_id",
+   "fieldtype": "Data",
+   "label": "Request ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "food_truck_session",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Food Truck Session",
+   "options": "Food Truck Session"
+  },
+  {
+   "fieldname": "food_truck_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Food Truck Unit",
+   "options": "Food Truck Unit"
+  },
+  {
+   "fieldname": "session_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Session Date"
+  },
+  {
+   "fieldname": "slot_id",
+   "fieldtype": "Data",
+   "label": "Slot ID",
+   "reqd": 1
+  },
+  {
+   "fieldname": "slot_time",
+   "fieldtype": "Data",
+   "label": "Slot Time"
+  },
+  {
+   "fieldname": "user_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "User ID (NIM)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "queue_pos",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Queue Position",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "CLAIMED\nREDEEMED\nEXPIRED",
+   "reqd": 1
+  },
+  {
+   "fieldname": "claimed_at",
+   "fieldtype": "Datetime",
+   "label": "Claimed At"
+  },
+  {
+   "fieldname": "redeemed_at",
+   "fieldtype": "Datetime",
+   "label": "Redeemed At"
+  },
+  {
+   "fieldname": "expired_at",
+   "fieldtype": "Datetime",
+   "label": "Expired At"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-20 11:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Food Truck App",
+ "name": "Food Truck Ticket History",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Petugas Food Truck",
+   "select": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

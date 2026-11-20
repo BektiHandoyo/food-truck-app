@@ -1,0 +1,124 @@
+{
+ "actions": [],
+ "autoname": "format:FTS-{session_date}-{food_truck_unit}-{###}",
+ "creation": "2026-11-20 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "session_date",
+  "food_truck_unit",
+  "slot_time",
+  "slot_id",
+  "quota",
+  "status",
+  "synced_to_do",
+  "closed_at"
+ ],
+ "fields": [
+  {
+   "default": "Today",
+   "fieldname": "session_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Session Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "food_truck_unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Food Truck Unit",
+   "options": "Food Truck Unit",
+   "reqd": 1
+  },
+  {
+   "description": "Contoh: 12:00 atau 11:30-13:00",
+   "fieldname": "slot_time",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Slot Time",
+   "reqd": 1
+  },
+  {
+   "description": "Otomatis: <unit>_<slot_time>",
+   "fieldname": "slot_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "DO Slot ID",
+   "read_only": 1
+  },
+  {
+   "default": "50",
+   "fieldname": "quota",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Quota",
+   "reqd": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nOpen\nClosed",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "synced_to_do",
+   "fieldtype": "Check",
+   "label": "Synced to Durable Object",
+   "read_only": 1
+  },
+  {
+   "fieldname": "closed_at",
+   "fieldtype": "Datetime",
+   "label": "Closed At",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-20 11:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Food Truck App",
+ "name": "Food Truck Session",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Petugas Food Truck",
+   "select": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Mahasiswa",
+   "select": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

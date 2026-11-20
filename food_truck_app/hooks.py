@@ -60,9 +60,25 @@ app_license = "mit"
 # home_page = "login"
 
 # website user home page (by Role)
-# role_home_page = {
-# 	"Role": "home_page"
-# }
+role_home_page = {
+	"Mahasiswa": "war-tiket",
+	"Petugas Food Truck": "validasi-tiket",
+}
+
+fixtures = [
+	{
+		"dt": "Role",
+		"filters": [["name", "in", ["Mahasiswa", "Petugas Food Truck"]]],
+	},
+	{
+		"dt": "Custom DocPerm",
+		"filters": [["role", "in", ["Mahasiswa", "Petugas Food Truck"]]],
+	},
+	{
+		"dt": "Custom Field",
+		"filters": [["name", "in", ["User-nim"]]],
+	},
+]
 
 # Generators
 # ----------
